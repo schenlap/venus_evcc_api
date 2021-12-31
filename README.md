@@ -1,5 +1,5 @@
 # venus_evcc_api
-It's intended use is to interact with evcc and reads values via dbus from victron venus device.
+It's intended use is to interact with https://github.com/evcc-io/evcc and reads values via dbus from victron venus device.
 Evcc is running on venus so dbus can be local reads. The kostal pico entries are from https://github.com/schenlap/venus_kostal_pico
 ```
 meters:
