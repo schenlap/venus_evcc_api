@@ -1,0 +1,2 @@
+#!/bin/sh
+dbus-send --system --print-reply --dest=com.victronenergy.grid.mec_tcp_50 /Ac/Power com.victronenergy.BusItem.GetValue | tail -n1 | awk '{print $3}'

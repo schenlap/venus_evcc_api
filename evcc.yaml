@@ -1,0 +1,195 @@
+uri: 0.0.0.0:7070 # uri for ui
+interval: 10s # control cycle interval
+
+# sponsor token enables optional features (request at https://cloud.evcc.io)
+# sponsortoken:
+
+# log settings
+log: error
+levels:
+  core: info #debug
+  lp-1: debug #debug
+  lp-2: warn #debug
+  awattar: error
+  site: debug
+
+# meter definitions
+# name can be freely chosen and is used as reference when assigning meters to site and loadpoints
+# for examples see https://github.com/evcc-io/config#meters
+meters:
+- name: grid
+  type: custom
+  power:
+    source: script
+    cmd: /bin/sh -c "./get_grid_meter"
+- name: battery
+  type: custom
+  power:
+    source: script
+    cmd: /bin/sh -c "./get_battery_power" # - ist Bezug bei Victron
+    scale: -1
+  soc:
+    source: script
+    cmd: /bin/sh -c "./get_battery_soc"
+- name: pv
+  type: custom
+  power:
+    source: calc
+    add:
+    - source: script
+      cmd: /bin/sh -c "./get_solar_power mppt"
+    - source: script
+      cmd: /bin/sh -c "./get_solar_power Kostal_Pico_5_5"
+    - source: script
+      cmd: /bin/sh -c "./get_solar_power Kostal_Pico_8_3"
+
+
+# charger definitions
+# name can be freely chosen and is used as reference when assigning charger to vehicle
+# for examples see https://github.com/evcc-io/config#chargers
+chargers:
+- name: charger
+  type: custom
+  status:
+    source: script
+    cmd: /bin/bash -c "cat /tmp/evccc/charge_status"
+  enabled:
+    source: script
+    cmd: /bin/bash -c "cat /tmp/evccc/enabled"
+  enable:
+    source: script
+    cmd: "echo ${%b} > /tmp/evccc/enable"
+  maxcurrent:
+    source: script
+    cmd: "echo ${%v} > /tmp/evccc/maxcurrent"
+
+# vehicle definitions
+# name can be freely chosen and is used as reference when assigning vehicle to loadpoint
+# for examples see https://github.com/evcc-io/config#vehicles
+vehicles:
+- name: car
+  type: custom
+  title: EV6
+  capacity: 49
+  charge:
+    source: script
+    cmd: /bin/bash -c "cat /tmp/evccc/soc"
+  cache: 30m
+#  type: renault
+#  title: Zoe
+#  capacity: 60 # kWh
+#  user: # user
+#  password: # password
+#  vin: WREN...
+#  cache: 5m
+
+# site describes the EVU connection, PV and home battery
+site:
+  title: Home # display name for UI
+  meters:
+    grid: grid # grid meter
+    pvs:
+     - pv
+    battery: battery
+  prioritySoC: # give home battery priority up to this soc (empty to disable)
+  bufferSoC: # ignore home battery discharge above soc (empty to disable)
+
+# loadpoint describes the charger, charge meter and connected vehicle
+loadpoints:
+- title: Garage # display name for UI
+  charger: charger
+  vehicle: car
+  # vehicles: # use if multiple vehicles allowed to charge on this loadpoint
+  # - ID.3
+  # - e-Up
+  mode: pv
+  soc:
+    # polling defines usage of the vehicle APIs
+    # Modifying the default settings it NOT recommended. It MAY deplete your vehicle's battery
+    # or lead to vehicle manufacturer banning you from API use. USE AT YOUR OWN RISK.
+    poll:
+      # poll mode defines under which condition the vehicle API is called:
+      #   charging: update vehicle ONLY when charging (this is the recommended default)
+      #   connected: update vehicle when connected (not only charging), interval defines how often
+      #   always: always update vehicle regardless of connection state, interval defines how often (only supported for single vehicle)
+      mode: charging
+      # poll interval defines how often the vehicle API may be polled if NOT charging
+      interval: 30m
+    min: 15  # immediately charge to 0% regardless of mode unless "off" (disabled)
+    target: 80 # always charge to 100%
+    estimate: true # set true to interpolate between api updates
+  resetOnDisconnect: true # set defaults when vehicle disconnects
+  onIdentify: # set defaults when vehicle is identified
+  phases: 1 # ev phases (default 3)
+  enable: # pv mode enable behavior
+    delay: 1m # threshold must be exceeded for this long
+    threshold: 0 # grid power threshold (in Watts, negative=export). If zero, export must exceed minimum charge power to enable
+  disable: # pv mode disable behavior
+    delay: 2m # threshold must be exceeded for this long
+    threshold: 200 # maximum import power (W)
+  guardDuration: 5m # switch charger contactor not more often than this (default 10m)
+  minCurrent: 6 # minimum charge current (default 6A)
+  maxCurrent: 16 # maximum charge current (default 16A)
+
+
+# tariffs are the fixed or variable tariffs
+# cheap can be used to define a tariff rate considered cheap enough for charging
+tariffs:
+  grid:
+    # # either
+    # type: tibber
+    # cheap: 20 # ct/kWh
+    # token: "476c477d8a039529478ebd690d35ddd80e3308ffc49b59c65b142321aee963a4" # access token
+    # homeid: "cc83e83e-8cbf-4595-9bf7-c3cf192f7d9c" # optional if multiple homes associated to account
+
+    # # or
+    #type: awattar
+    #cheap: 5 # ct/kWh
+    #region: AT # optional, choose at for Austria
+
+# mqtt message broker
+mqtt:
+  # broker: localhost:1883
+  # topic: evcc # root topic for publishing, set empty to disable
+  # user:
+  # password:
+
+# influx database
+influx:
+  # url: http://localhost:8086
+  # database: evcc
+  # user:
+  # password:
+
+# eebus credentials
+eebus:
+  # uri: # :4712
+  # public: # public key
+  # private: # private key
+
+# push messages
+#messaging:
+#  events:
+#    start: # charge start event
+#      title: Charge started
+#      msg: Started charging in "${mode}" mode
+#    stop: # charge stop event
+#      title: Charge finished
+#      msg: Finished charging ${chargedEnergy:%.1fk}kWh in ${chargeDuration}.
+#    connect: # vehicle connect event
+#      title: Car connected
+#      msg: "Car connected at ${pvPower:%.1fk}kW PV"
+#    disconnect: # vehicle connected event
+#      title: Car disconnected
+#      msg: Car disconnected after ${connectedDuration}
+#  services:
+  # - type: pushover
+  #   app: # app id
+  #   recipients:
+  #   - # list of recipient ids
+  # - type: telegram
+  #   token: # bot id
+  #   chats:
+  #   - # list of chat ids
+  # - type: email
+  #   uri: smtp://<user>:<password>@<host>:<port>/?fromAddress=<from>&toAddresses=<to>

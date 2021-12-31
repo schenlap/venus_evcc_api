@@ -1,0 +1,13 @@
+#!/bin/sh
+case "$1" in
+ Kostal_Pico_5_5)
+   dbus-send --system --print-reply --dest=com.victronenergy.pvinverter.Kostal_Pico_5_5 /Ac/Power com.victronenergy.BusItem.GetValue | tail -n1 | awk '{print $3}'
+   ;;
+ Kostal_Pico_8_3)
+   dbus-send --system --print-reply --dest=com.victronenergy.pvinverter.Kostal_Piko_8_3 /Ac/Power com.victronenergy.BusItem.GetValue | tail -n1 | awk '{print $3}'
+   ;;
+ mppt)
+   dbus-send --system --print-reply --dest=com.victronenergy.solarcharger.ttyO2 /Yield/Power com.victronenergy.BusItem.GetValue | tail -n1 | awk '{print $3}'
+   ;;
+esac
+
